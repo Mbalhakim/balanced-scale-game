@@ -5,13 +5,15 @@ import { initSocket, getSocket } from "@/app/util/socket";
 import NumberGrid from "@/app/multiplayer/components/NumberGrid";
 import PlayerList from "@/app/multiplayer/components/PlayerList";
 import Results from "@/app/multiplayer/components/Results";
-import RoomList from "@/app/multiplayer//components/RoomList";
+import RoomList from "@/app/multiplayer/components/RoomList";
 
 
 type Player = {
   id: string;
   name: string;
   ready: boolean;
+  points: number;
+  alive: boolean;
 };
 
 type Room = {
@@ -29,11 +31,10 @@ export default function MultiplayerPage() {
   const [gameStarted, setGameStarted] = useState(false);
   const [numberSelected, setNumberSelected] = useState(false);
   const [results, setResults] = useState<{ target: number; winner: string | null } | null>(null);
-const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
-const [otherSelections, setOtherSelections] = useState<{ playerName: string; number: number }[]>(
-    []
-);
-
+  const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+  const [otherSelections, setOtherSelections] = useState<{ playerName: string; number: number }[]>([]);
+  const [currentStage, setCurrentStage] = useState(1);
+  const [isAlive, setIsAlive] = useState(true); // Track whether the player is alive
   useEffect(() => {
     const socket = initSocket(process.env.NEXT_PUBLIC_SOCKET_SERVER || "http://localhost:3001");
 
@@ -41,19 +42,38 @@ const [otherSelections, setOtherSelections] = useState<{ playerName: string; num
       socket.on("available-rooms", (rooms) => setAvailableRooms(rooms));
       socket.on("room-update", (data) => setPlayers(data.players));
       socket.on("start-game", () => setGameStarted(true));
+      socket.on("stage-update", ({ stage }) => setCurrentStage(stage));
       socket.on("number-selected", ({ playerName, number }) => {
-        setOtherSelections((prev) => [...prev, { playerName, number }]); // Track other players' numbers
+        setOtherSelections((prev) => [...prev, { playerName, number }]);
       });
-      socket.on("player-selected", ({ playerName }) => {
-        console.log(`${playerName} has selected a number.`);
-      });
-      socket.on("round-results", ({ target, winner }) => {
+      socket.on("round-results", ({ target, winner, players }) => {
         setResults({ target, winner });
+        setPlayers(players);
         setNumberSelected(false);
+      });
+      
+
+        // Check if the player has been eliminated
+
+        const currentPlayer = players.find((p) => p.name === playerName);
+
+        if (currentPlayer && !currentPlayer.alive) {
+
+          setIsAlive(false);
+
+        }
+
+
+      socket.on("next-round", () => {
+        if (!isAlive) return;
+        setResults(null); // Clear previous round results
+        setNumberSelected(false); // Reset selection status
+        setSelectedNumber(null); // Clear selected number
+        setOtherSelections([]); // Clear selections from others
+        console.log("Next round started");
       });
       socket.on("error", (message) => alert(message));
     }
-      
 
     return () => {
       getSocket()?.disconnect();
@@ -77,18 +97,88 @@ const [otherSelections, setOtherSelections] = useState<{ playerName: string; num
     const socket = getSocket();
     if (socket && selectedRoom) {
       socket.emit("select-number", { room: selectedRoom, number });
-      setSelectedNumber(number); // Update the selected number
-      setNumberSelected(true);  // Lock selection until the round ends
+      setSelectedNumber(number);
+      setNumberSelected(true);
     }
   };
   
+  if (!isAlive) {
 
+    return (
+
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 text-white">
+
+        <h1 className="text-5xl font-bold mb-4">Game Over</h1>
+
+        <p className="text-xl">You have been eliminated. Watch the game progress below:</p>
+
+        {results && (
+
+          <div className="mt-4">
+
+            <Results target={results.target} winner={results.winner} />
+
+            <h3 className="text-xl mt-4">Player Status:</h3>
+
+            <ul>
+
+              {players.map((player) => (
+
+                <li
+
+                  key={player.id}
+
+                  className={`mt-2 ${
+
+                    player.alive ? "text-white" : "text-red-500"
+
+                  }`}
+
+                >
+
+                  {player.name} - Points: {player.points}{" "}
+
+                  {player.alive ? "" : "(Eliminated)"}
+
+                </li>
+
+              ))}
+
+            </ul>
+
+          </div>
+
+        )}
+
+      </div>
+
+    );
+
+  }
   if (gameStarted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-700">
         <h1 className="text-3xl font-bold">Game In Progress</h1>
+        <h2 className="text-2xl mt-4">Current Stage: {currentStage}</h2>
+
         {results ? (
-          <Results target={results.target} winner={results.winner} />
+          <div>
+            <Results target={results.target} winner={results.winner} />
+            <h3 className="text-xl mt-4">Player Status:</h3>
+            <ul>
+              {players.map((player) => (
+                <li
+                  key={player.id}
+                  className={`mt-2 ${
+                    player.alive ? "text-white" : "text-red-500"
+                  }`}
+                >
+                  {player.name} - Points: {player.points}{" "}
+                  {player.alive ? "" : "(Eliminated)"}
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : numberSelected ? (
           <div className="mt-4">
             <p>Waiting for other players to select...</p>
@@ -102,7 +192,11 @@ const [otherSelections, setOtherSelections] = useState<{ playerName: string; num
             </ul>
           </div>
         ) : (
-          <NumberGrid onSelect={selectNumber} selectedNumber={selectedNumber} />
+          <NumberGrid
+            onSelect={selectNumber}
+            selectedNumber={selectedNumber}
+            selectedNumbers={otherSelections.map((o) => o.number)}
+          />
         )}
       </div>
     );
@@ -115,11 +209,13 @@ const [otherSelections, setOtherSelections] = useState<{ playerName: string; num
         socket.emit("toggle-ready", { room: selectedRoom });
       }
     };
-  
+
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-700">
         <h2 className="text-2xl font-semibold">Welcome, {playerName}!</h2>
-        <p className="mt-2">You are in room: <strong>{selectedRoom}</strong></p>
+        <p className="mt-2">
+          You are in room: <strong>{selectedRoom}</strong>
+        </p>
         <PlayerList
           players={players}
           currentPlayerName={playerName}
@@ -128,7 +224,6 @@ const [otherSelections, setOtherSelections] = useState<{ playerName: string; num
       </div>
     );
   }
-  
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-700">

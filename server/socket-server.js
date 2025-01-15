@@ -7,28 +7,14 @@ const io = new Server(3001, {
   },
 });
 
-// Predefined rooms with a maximum of 5 players
 const rooms = {
-  Room1: { players: [], maxPlayers: 5, roundData: {} },
-  Room2: { players: [], maxPlayers: 5, roundData: {} },
-  Room3: { players: [], maxPlayers: 5, roundData: {} },
-  Room4: { players: [], maxPlayers: 5, roundData: {} },
-  Room5: { players: [], maxPlayers: 5, roundData: {} },
+  Room1: { players: [], maxPlayers: 5, roundData: {}, stage: 1 },
+  Room2: { players: [], maxPlayers: 5, roundData: {}, stage: 1 },
+  Room3: { players: [], maxPlayers: 5, roundData: {}, stage: 1 },
+  Room4: { players: [], maxPlayers: 5, roundData: {}, stage: 1 },
+  Room5: { players: [], maxPlayers: 5, roundData: {}, stage: 1 },
 };
 
-// Check if all players in a room are ready and there are at least 2 players
-const checkAllReady = (room) => {
-  const roomPlayers = rooms[room]?.players || [];
-  return roomPlayers.length > 1 && roomPlayers.every((player) => player.ready);
-};
-
-// Check if all players have selected a number
-const allPlayersSelected = (room) => {
-  const roomPlayers = rooms[room]?.players || [];
-  return roomPlayers.every((player) => rooms[room].roundData[player.id] !== undefined);
-};
-
-// Emit updated room occupancy to all clients
 const emitRoomData = () => {
   const roomData = Object.keys(rooms).map((room) => ({
     name: room,
@@ -38,53 +24,74 @@ const emitRoomData = () => {
   io.emit("available-rooms", roomData);
 };
 
+const checkAllReady = (room) => {
+  const roomPlayers = rooms[room]?.players || [];
+  return roomPlayers.length > 1 && roomPlayers.every((player) => player.ready);
+};
+
+const getAlivePlayers = (room) => {
+  return rooms[room]?.players.filter((player) => player.alive).length || 0;
+};
+
+const allPlayersSelected = (room) => {
+  const alivePlayers = rooms[room]?.players.filter((player) => player.alive) || [];
+  return alivePlayers.every((player) => rooms[room].roundData[player.id] !== undefined);
+};
+
+const updateStage = (room) => {
+  const alivePlayers = getAlivePlayers(room);
+
+  let newStage = 1;
+  if (alivePlayers <= 2) newStage = 3;
+  else if (alivePlayers <= 4) newStage = 2;
+
+  if (rooms[room].stage !== newStage) {
+    rooms[room].stage = newStage;
+    io.to(room).emit("stage-update", { stage: newStage });
+    console.log(`Stage updated to ${newStage} in ${room}`);
+  }
+};
+
 io.on("connection", (socket) => {
   console.log("Player connected:", socket.id);
 
-  // Send initial room data to the client
   emitRoomData();
 
-  // Handle joining a room
   socket.on("join-room", ({ playerName, room }) => {
     if (!rooms[room]) {
       socket.emit("error", "Room does not exist");
       return;
     }
 
-    
-    // Prevent joining if the room is full
     if (rooms[room].players.length >= rooms[room].maxPlayers) {
       socket.emit("error", "Room is full");
       return;
     }
 
-    // Join the room
+    rooms[room].players.push({ id: socket.id, name: playerName, points: 0, ready: false, alive: true });
     socket.join(room);
-    rooms[room].players.push({ id: socket.id, name: playerName, ready: false });
 
-    // Broadcast updated room and occupancy data
     emitRoomData();
     io.to(room).emit("room-update", rooms[room]);
     console.log(`${playerName} joined ${room}`);
   });
+
   socket.on("select-number", ({ room, number }) => {
     if (!rooms[room]) return;
 
-    // Store the player's number
+    const player = rooms[room].players.find((p) => p.id === socket.id);
+    if (!player || !player.alive) return; // Ignore selections from eliminated players
+
     rooms[room].roundData[socket.id] = number;
 
-    // Broadcast the selected number to the room
-    const player = rooms[room].players.find((p) => p.id === socket.id);
     io.to(room).emit("number-selected", { playerName: player.name, number });
 
-    // Check if all players have selected a number
     if (allPlayersSelected(room)) {
       // Calculate results
       const numbers = Object.values(rooms[room].roundData);
       const average = numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
       const target = average * 0.8;
 
-      // Determine the winner
       let winner = null;
       let minDifference = Infinity;
       for (const [id, num] of Object.entries(rooms[room].roundData)) {
@@ -97,37 +104,52 @@ io.on("connection", (socket) => {
 
       const winnerName = rooms[room].players.find((p) => p.id === winner)?.name;
 
-      // Broadcast the results
-      io.to(room).emit("round-results", { target, winner: winnerName });
+      rooms[room].players.forEach((player) => {
+        if (player.id !== winner) {
+          player.points -= 1;
+          if (player.points <= -3) {
+            player.alive = false;
+            console.log(`${player.name} has been eliminated!`);
+          }
+        }
+      });
 
-      // Reset round data
+      io.to(room).emit("round-results", {
+        target,
+        winner: winnerName,
+        players: rooms[room].players,
+      });
+
       rooms[room].roundData = {};
+      updateStage(room);
+
+      // Start the next round after a short delay
+      setTimeout(() => {
+        io.to(room).emit("next-round");
+        console.log(`Next round started in ${room}`);
+      }, 2000); // 5-second delay before the next round
     }
   });
 
-  // Handle readiness toggle
   socket.on("toggle-ready", ({ room }) => {
     const player = rooms[room]?.players.find((p) => p.id === socket.id);
     if (player) {
-      player.ready = !player.ready; // Toggle readiness
-      io.to(room).emit("room-update", rooms[room]); // Broadcast update
-      console.log(`${player.name} is now ${player.ready ? "ready" : "not ready"}`);
+      player.ready = !player.ready;
+      io.to(room).emit("room-update", rooms[room]);
 
-      // Start game only if all players are ready and the room has at least 2 players
       if (checkAllReady(room)) {
-        io.to(room).emit("start-game"); // Broadcast start-game event
+        io.to(room).emit("start-game");
         console.log(`Game started in ${room}`);
       }
     }
   });
 
-  // Handle disconnection
   socket.on("disconnect", () => {
     for (const room in rooms) {
       const index = rooms[room].players.findIndex((p) => p.id === socket.id);
       if (index !== -1) {
         rooms[room].players.splice(index, 1);
-        io.to(room).emit("room-update", rooms[room]); // Notify remaining players
+        io.to(room).emit("room-update", rooms[room]);
         console.log(`Player ${socket.id} left ${room}`);
         break;
       }
