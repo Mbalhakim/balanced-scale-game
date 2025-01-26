@@ -1,35 +1,49 @@
-import Results from "./Results";
-import { Player } from "@/app/hooks/useMultiplayer";
+// components/GameOver.tsx
+import { useState } from 'react';
+import { Player } from '@/app/types/game'; // Import Player type
 
-type GameOverProps = {
-  results: { target: number; winner: string | null } | null;
+export default function GameOver({
+  results,
+  players,
+  onLeave
+}: {
+  results: { target: number; winner: string | null };
   players: Player[];
-  isSpectator?: boolean;
-};
+  onLeave: () => void;
+}) {
+  const [isLeaving, setIsLeaving] = useState(false);
 
-export default function GameOver({ results, players, isSpectator }: GameOverProps) {
+  const handleLeave = () => {
+    setIsLeaving(true);
+    onLeave(); // Socket handling should be in the parent component
+  };
+
   return (
-    
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 text-white">
-      <h1 className="text-5xl font-bold mb-4"> {isSpectator ? 'Game Ended' : 'Game Over'}</h1>
-      <p className="text-xl">You have been eliminated. Watch the game progress below:</p>
-      {results && (
-        <div className="mt-4">
-          <Results target={results.target} winner={results.winner} />
-          <h3 className="text-xl mt-4">Player Status:</h3>
-          <ul>
-            {players.map((player) => (
-              <li
-                key={player.id}
-                className={`mt-2 ${player.alive ? "text-white" : "text-red-500"}`}
-              >
-                {player.name} - Points: {player.points}{" "}
-                {player.alive ? "" : "(Eliminated)"}
-              </li>
-            ))}
-          </ul>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-6">
+      <div className="text-center space-y-4 max-w-2xl">
+        <h2 className="text-4xl font-bold text-red-400">Game Over</h2>
+        {results.winner && (
+          <p className="text-xl">Winner: {results.winner}</p>
+        )}
+        
+        <div className="mt-6 space-y-3">
+          {players.map(player => (
+            <div key={player.id} className={`p-3 rounded-lg ${
+              player.alive ? 'bg-green-900/30' : 'bg-red-900/30'
+            }`}>
+              {player.name} - {player.alive ? 'Winner' : 'Eliminated'}
+            </div>
+          ))}
         </div>
-      )}
+
+        <button
+          onClick={handleLeave}
+          disabled={isLeaving}
+          className="mt-8 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {isLeaving ? 'Leaving...' : 'Return to Room List'}
+        </button>
+      </div>
     </div>
   );
 }

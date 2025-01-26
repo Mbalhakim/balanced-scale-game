@@ -10,7 +10,7 @@ import Results from "@/app/multiplayer/components/Results";
 import StageTransition from "./components/StageTransition";
 import VictoryScreen from "./components/VictoryScreen";
 export default function MultiplayerPage() {
-  const { gameState, joinRoom, toggleReady, selectNumber } = useMultiplayer();
+  const { gameState, joinRoom, toggleReady, selectNumber, leaveRoom  } = useMultiplayer();
   const [localPlayers, setLocalPlayers] = useState<typeof gameState.players>([]);
 
   // Sync local players state with gameState
@@ -34,6 +34,14 @@ export default function MultiplayerPage() {
       </div>
     );
   }
+    // Update existing game-over check
+    if (gameState.status === 'game-over') {
+      return <GameOver 
+        results={gameState.results} 
+        players={gameState.players} 
+        onLeave={leaveRoom} // Add missing prop
+      />;
+    }
 
   if (!gameState.selectedRoom) {
     return (
@@ -45,8 +53,12 @@ export default function MultiplayerPage() {
   }
   
 
-  if (gameState.status === 'eliminated') {
-    return <GameOver results={gameState.results} players={gameState.players} />;
+  if (gameState.status === 'eliminated' || gameState.status === 'game-over') {
+    return <GameOver 
+      results={gameState.results} 
+      players={gameState.players} 
+      onLeave={leaveRoom} // Add this prop
+    />;
   }
 
  // Modify the status check
@@ -143,6 +155,7 @@ export default function MultiplayerPage() {
     return <VictoryScreen 
       winner={gameState.results?.winner || ''} 
       players={gameState.players} 
+      onLeave={leaveRoom} // Add this prop
     />;
   }
 
@@ -170,14 +183,8 @@ export default function MultiplayerPage() {
     );
   }
 
-  // Update existing game-over check
-  if (gameState.status === 'game-over') {
-    return <GameOver 
-      results={gameState.results} 
-      players={gameState.players} 
-      isSpectator={false}
-    />;
-  }
+
+  
   /* Lobby Screen */
   return (
     <PlayerLobby

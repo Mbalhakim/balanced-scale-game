@@ -1,10 +1,22 @@
 'use client';
 import { Player } from "@/app/types/game";
-
-export default function VictoryScreen({ winner, players }: { 
+import { useState } from "react";
+export default function VictoryScreen({ winner, players, onLeave }: { 
   winner: string,
-  players: Player[]
-}) {
+  players: Player[],
+  onLeave: () => void;
+
+  
+})
+ {
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const handleLeave = () => {
+    if (window.confirm('Return to room list?')) {
+      setIsLeaving(true);
+      onLeave();
+    }
+  };
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-emerald-900/50 text-white p-6">
       <h1 className="text-5xl font-bold mb-4">🏆 Victory! 🏆</h1>
@@ -29,6 +41,14 @@ export default function VictoryScreen({ winner, players }: {
             </div>
           ))}
         </div>
+         {/* Add leave button */}
+         <button
+          onClick={handleLeave}
+          disabled={isLeaving}
+          className="mt-8 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {isLeaving ? 'Leaving...' : 'Return to Room List'}
+        </button>
       </div>
     </div>
   );

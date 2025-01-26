@@ -16,6 +16,8 @@ export const useMultiplayer = () => {
     error: undefined
   });
 
+  
+
   useEffect(() => {
     const socket = initSocket(process.env.NEXT_PUBLIC_SOCKET_SERVER || "http://localhost:3001");
 
@@ -38,13 +40,20 @@ export const useMultiplayer = () => {
       setGameState(prev => ({ ...prev, rooms }));
     });
 
-    socket.on("room-update", (players: Player[]) => {
-      setGameState(prev => ({
-        ...prev,
-        players,
-        status: prev.status === 'eliminated' ? 'eliminated' : 'lobby'
-      }));
-    });
+    // In useMultiplayer.ts, update the 'room-update' listener:
+socket.on("room-update", (players: Player[]) => {
+  setGameState(prev => {
+    const currentPlayer = players.find(p => p.name === prev.playerName);
+    const isEliminated = currentPlayer ? !currentPlayer.alive : false;
+    
+    // Preserve current status unless player is eliminated
+    return {
+      ...prev,
+      players,
+      status: isEliminated ? 'eliminated' : prev.status
+    };
+  });
+});
 
     socket.on("spectate-mode", (data) => {
       setGameState(prev => ({
@@ -61,11 +70,11 @@ export const useMultiplayer = () => {
       setGameState(prev => ({
         ...prev,
         status: 'game-over',
-        selectedRoom: '',
         players,
         results: { target: 0, winner }
       }));
     });
+    
 
     socket.on("player-joined", (player: Player) => {
       setGameState(prev => ({
@@ -92,6 +101,13 @@ export const useMultiplayer = () => {
         status: 'playing',
         results: null,
         selectedNumber: null
+      }));
+    });
+    socket.on("force-leave-room", () => {
+      setGameState(prev => ({
+        ...prev,
+        selectedRoom: '',
+        status: prev.status === 'game-over' ? 'game-over' : 'lobby'
       }));
     });
 
@@ -131,20 +147,19 @@ export const useMultiplayer = () => {
     });
 
     // Modify the 'next-round' listener in useMultiplayer.ts
-  socket.on("next-round", () => {
+    // In useMultiplayer.ts, update the 'next-round' listener:
+socket.on("next-round", () => {
   setGameState(prev => ({
     ...prev,
     results: null,
     selectedNumber: null,
-    status: 'playing' // Reset status to playing
+    status: 'playing'
   }));
 });
-socket.on("force-leave-room", () => {
-  setGameState(prev => ({
-    ...prev,
-    selectedRoom: '',
-    status: 'lobby'
-  }));
+
+// Add to socket listeners in useMultiplayer.ts
+socket.on("manual-leave", () => {
+  leaveRoom();
 });
 
 socket.on("victory", ({ winner, players }) => {
@@ -198,10 +213,35 @@ socket.on("victory", ({ winner, players }) => {
     }
   };
 
+// In useMultiplayer.ts - Modify leaveRoom function
+const leaveRoom = () => {
+  const socket = getSocket();
+  if (socket) {
+    socket.emit("leave-room");
+    socket.disconnect();
+  }
+  
+  // Reset local state
+    // Reset all client state
+    setGameState({
+      status: 'lobby',
+      players: [],
+      currentStage: 1,
+      selectedNumber: null,
+      results: null,
+      rooms: [],
+      selectedRoom: '',
+      playerName: '',
+      error: undefined
+    });
+  };
+
+
   return {
     gameState,
     joinRoom,
     toggleReady,
-    selectNumber
+    selectNumber,
+    leaveRoom
   };
 };

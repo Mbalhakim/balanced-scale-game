@@ -1,9 +1,18 @@
+import { useState } from "react";
 type NumberGridProps = {
   onSelect: (number: number) => void; // Callback for when a number is selected
   selectedNumber: number | null;     // The currently selected number
 };
 
 const NumberGrid: React.FC<NumberGridProps> = ({ onSelect, selectedNumber }) => {
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  const handleSelect = (num: number) => {
+    if (!hasSubmitted) {
+      onSelect(num);
+      setHasSubmitted(true); // Prevent multiple submissions
+    }
+  };
   return (
     <div className="flex flex-col items-center">
       {/* Display the currently selected number */}
@@ -15,14 +24,13 @@ const NumberGrid: React.FC<NumberGridProps> = ({ onSelect, selectedNumber }) => 
       <div className="grid grid-cols-10 gap-2">
         {Array.from({ length: 101 }, (_, i) => i).map((num) => (
           <button
-            key={num}
-            className={`px-4 py-2 rounded ${
-              selectedNumber === num
-                ? "bg-green-500 text-white" // Highlight the selected number
-                : "bg-blue-500 text-white hover:bg-blue-400"
-            }`}
-            onClick={() => onSelect(num)} // Update the selection on click
-          >
+          key={num}
+          onClick={() => handleSelect(num)}
+          disabled={hasSubmitted || selectedNumber !== null}
+          className={`p-4 rounded-lg text-white transition-colors 
+            ${selectedNumber === num ? 'bg-purple-600' : 'bg-gray-700'}
+            ${hasSubmitted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`}
+        >
             {num}
           </button>
         ))}
