@@ -133,12 +133,12 @@ socket.on("room-update", (players: Player[]) => {
       }));
     });
 
-    socket.on("round-results", ({ target, winner, players, stage, aliveCount, status }) => {
+    socket.on("round-results", ({ target, roundWinner, players, stage, aliveCount, status }) => {
       setGameState(prev => {
         const currentPlayer = players.find(p => p.name === prev.playerName);
         return {
           ...prev,
-          results: { target, winner },
+          results: { target, winner: roundWinner },  // Map roundWinner to winner
           players,
           currentStage: stage,
           status: currentPlayer?.alive ? status : 'eliminated'

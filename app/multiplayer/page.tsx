@@ -63,11 +63,18 @@ export default function MultiplayerPage() {
 
  // Modify the status check
  if (gameState.status === 'stage-transition') {
-  return <StageTransition 
+  const currentPlayer = gameState.players.find(p => p.name === gameState.playerName);
+  const aliveCount = gameState.players.filter(p => p.alive).length;
+
+  return <StageTransition
     stage={gameState.currentStage}
-    aliveCount={gameState.players.filter(p => p.alive).length}
-    results={gameState.results!}
-    currentPlayer={gameState.players.find(p => p.name === gameState.playerName)}
+    aliveCount={aliveCount}
+    results={{
+      target: gameState.results?.target || 0,
+      winner: gameState.results?.winner || ''  // Now properly mapped
+    }}
+    players={gameState.players}
+    currentPlayer={currentPlayer}
   />;
 }
 
@@ -123,9 +130,11 @@ export default function MultiplayerPage() {
             /* Game Screen */
             <div className="space-y-8">
               <NumberGrid 
-                onSelect={selectNumber}
-                selectedNumber={gameState.selectedNumber}
-              />
+                  onSelect={selectNumber}
+                    selectedNumber={gameState.selectedNumber}
+                    players={gameState.players}
+                        currentPlayer={gameState.players.find(p => p.name === gameState.playerName)}
+/>
               
               {/* Current Players */}
               <div className="bg-gray-700/50 rounded-xl p-6">

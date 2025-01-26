@@ -5,6 +5,7 @@ export type Player = {
   points: number;
   alive: boolean;
   currentSelection?: number;
+  image: string;
 };
 
 export type Room = {

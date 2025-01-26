@@ -1,5 +1,11 @@
 const { broadcastRoomData } = require("../services/roomService");
-
+const playerImages = [
+    '/images/avatars/Benzo-Yashige.png',
+    '/images/avatars/Chishiya-3.jpg',
+    '/images/avatars/Hinako-Daimon.png',
+    '/images/avatars/Keiichi-Kuzuryu.png',
+    '/images/avatars/Takashi-Asuma.png'
+  ];
 const handleJoinRoom = (socket, io, rooms, { playerName, room: roomName }) => {
   const room = rooms.get(roomName);
   if (room?.status !== "lobby") {
@@ -10,7 +16,7 @@ const handleJoinRoom = (socket, io, rooms, { playerName, room: roomName }) => {
   if (room.players.length >= room.maxPlayers) {
     return socket.emit("error", "Room full");
   }
-
+  const imageIndex = room.players.length % playerImages.length;
   const player = {
     id: socket.id,
     name: playerName,
@@ -18,6 +24,8 @@ const handleJoinRoom = (socket, io, rooms, { playerName, room: roomName }) => {
     ready: false, // Reset ready status
     alive: true, // Reset alive state
     currentSelection: null, // Clear previous selections
+    image: playerImages[imageIndex] // Assign image
+
   };
 
   room.players.push(player);

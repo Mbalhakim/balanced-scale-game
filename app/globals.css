@@ -19,3 +19,23 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* Custom avatar borders */
+.avatar-win {
+  box-shadow: 0 0 15px theme('colors.green.500');
+}
+
+.avatar-lose {
+  box-shadow: 0 0 15px theme('colors.red.500');
+}
+
+/* Smooth transitions */
+.player-card {
+  transition: all 0.3s ease;
+}
+
+/* Responsive grid */
+@media (max-width: 768px) {
+  .player-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
