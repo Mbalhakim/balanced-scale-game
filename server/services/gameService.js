@@ -20,7 +20,7 @@ const startGameCountdown = (roomName, room, io, rooms) => {
       room.countdownTimer = null;
       startGame(roomName, room, io, rooms);
     }
-  }, 1000);
+  }, 3000);
 };
 
 const startGame = (roomName, room, io, rooms) => {

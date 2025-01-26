@@ -38,7 +38,7 @@ const handleRoundResults = (roomName, room, io, rooms) => {
     roundLosers.forEach((player) => {
         if (player.alive) { // Only penalize alive players
             player.points -= 1;
-            if (player.points <= -3) {
+            if (player.points <= -10) {
                 player.alive = false;
             }
         }

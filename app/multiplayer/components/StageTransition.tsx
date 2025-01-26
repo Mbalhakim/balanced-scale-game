@@ -4,18 +4,13 @@ import PlayerCard from "@/app/multiplayer/components/PlayerCard";
 
 export default function StageTransition({
   stage,
-  aliveCount,
   results,
-  currentPlayer,
-  players = [] // Add default empty array
+  players = [],
+  currentPlayer
 }: {
   stage: number;
-  aliveCount: number;
-  results: {
-    target: number;
-    winner: string;  // Ensure this matches the passed prop
-  };
-  players?: Player[]; // Make optional with ?
+  results: { target: number; winner: string };
+  players?: Player[];
   currentPlayer?: Player;
 }) {
   return (
@@ -23,17 +18,26 @@ export default function StageTransition({
       <h1 className="text-4xl font-bold mb-8">Stage {stage} Complete!</h1>
       
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full max-w-4xl mb-8">
-        {players?.map(player => ( // Add optional chaining
-          <PlayerCard
-            key={player.id}
-            player={player}
-            isCurrent={player.id === currentPlayer?.id}
-            result={
-              player.name === results.winner ? 'win' :
-              player.alive ? null : 'lose'
-            }
-          />
-        ))}
+        {players?.map(player => {
+          // Ensure selection is preserved
+          const playerWithSelection = { 
+            ...player,
+            currentSelection: player.currentSelection // Force include selection
+          };
+
+          return (
+            <PlayerCard
+              key={player.id}
+              player={playerWithSelection}
+              isCurrent={player.id === currentPlayer?.id}
+              result={
+                player.name === results.winner ? 'win' :
+                !player.alive ? 'lose' : null
+              }
+              className="w-full"
+            />
+          );
+        })}
       </div>
 
       <div className="bg-gray-800/50 p-6 rounded-lg text-center">

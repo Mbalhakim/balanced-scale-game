@@ -26,4 +26,5 @@ export type GameState = {
   playerName: string;
   error?: string;
   countdown?: number;
+  currentSelection: number | null;
 };

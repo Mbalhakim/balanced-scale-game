@@ -26,25 +26,26 @@ const NumberGrid: React.FC<NumberGridProps> = ({
   };
 
   return (
-    <div className="flex flex-row gap-8 w-full max-w-6xl p-4">
-      {/* Current Player Card - Left Side */}
-      <div className="w-1/3 flex flex-col items-center">
+    <div className="flex flex-col items-center w-full max-w-6xl p-4">
+      {/* Player Card - Top Section */}
+      <div className="w-full mb-8 scale-110 origin-top">
         {currentPlayer && (
           <PlayerCard
             player={currentPlayer}
             isCurrent={true}
-            className="sticky top-4"
+            compact={true}
+            className="w-full max-w-md mx-auto"
           />
         )}
       </div>
 
-      {/* Number Grid - Right Side */}
-      <div className="w-2/3">
+      {/* Number Grid - Bottom Section */}
+      <div className="w-full">
         <div className="text-2xl font-bold mb-4 text-center">
           Selected Number: {selectedNumber !== null ? selectedNumber : "None"}
         </div>
 
-        <div className="grid grid-cols-8 gap-1.5">
+        <div className="grid grid-cols-5 sm:grid-cols-8 gap-1.5">
           {Array.from({ length: 101 }, (_, i) => i).map((num) => (
             <button
               key={num}
