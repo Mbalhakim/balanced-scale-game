@@ -20,7 +20,7 @@ export const useMultiplayer = () => {
 
   useEffect(() => {
     const socket = initSocket(process.env.NEXT_PUBLIC_SOCKET_SERVER || "http://localhost:3001");
-
+    socket.emit("request-rooms");
     const handleRoomUpdate = (players: Player[] = []) => {
       setGameState(prev => {
         if (!prev.playerName || !prev.selectedRoom) return prev;
@@ -178,7 +178,7 @@ socket.on("victory", ({ winner, players }) => {
     return () => {
       socket.off("room-update", handleRoomUpdate);
       socket.off("player-joined");
-      getSocket()?.disconnect();
+      // getSocket()?.disconnect();
     };
   }, []);
 

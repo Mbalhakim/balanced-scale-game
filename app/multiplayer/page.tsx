@@ -9,12 +9,14 @@ import JoinRoom from "@/app/multiplayer/components/JoinRoom";
 import Results from "@/app/multiplayer/components/Results";
 import StageTransition from "./components/StageTransition";
 import VictoryScreen from "./components/VictoryScreen";
+import {maintainSocketConnection} from "@/app/util/socket"
 export default function MultiplayerPage() {
   const { gameState, joinRoom, toggleReady, selectNumber, leaveRoom  } = useMultiplayer();
   const [localPlayers, setLocalPlayers] = useState<typeof gameState.players>([]);
 
   // Sync local players state with gameState
   useEffect(() => {
+    maintainSocketConnection();
     setLocalPlayers(gameState.players);
   }, [gameState.players]);
 

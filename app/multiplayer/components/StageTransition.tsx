@@ -1,4 +1,5 @@
-'use client';
+// StageTransition.tsx
+"use client";
 import { Player } from "@/app/types/game";
 import PlayerCard from "@/app/multiplayer/components/PlayerCard";
 
@@ -6,7 +7,7 @@ export default function StageTransition({
   stage,
   results,
   players = [],
-  currentPlayer
+  currentPlayer,
 }: {
   stage: number;
   results: { target: number; winner: string };
@@ -15,38 +16,39 @@ export default function StageTransition({
 }) {
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-900 text-white p-6">
-      <h1 className="text-4xl font-bold mb-8">Stage {stage} Complete!</h1>
-      
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full max-w-4xl mb-8">
-        {players?.map(player => {
-          // Ensure selection is preserved
-          const playerWithSelection = { 
-            ...player,
-            currentSelection: player.currentSelection // Force include selection
-          };
-
-          return (
-            <PlayerCard
-              key={player.id}
-              player={playerWithSelection}
-              isCurrent={player.id === currentPlayer?.id}
-              result={
-                player.name === results.winner ? 'win' :
-                !player.alive ? 'lose' : null
-              }
-              className="w-full"
-            />
-          );
-        })}
+      {/* Victory Header */}
+      <div className="text-center mb-8">
+        <h1 className="text-5xl font-bold text-green-400 mb-2">🎉 WIN</h1>
+        <p className="text-2xl text-gray-300">Stage {stage} Complete!</p>
       </div>
 
-      <div className="bg-gray-800/50 p-6 rounded-lg text-center">
-        <h2 className="text-2xl font-bold mb-4">Round Results</h2>
-        <p className="text-xl">
-          Target Number: <span className="font-mono">{results.target.toFixed(2)}</span>
-        </p>
-        <p className="text-xl mt-2">
-          Round Winner: <span className="text-green-400">{results.winner}</span>
+      {/* Player Cards Grid - Updated */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
+        {players?.map((player) => (
+          <div
+            key={player.id}
+            className="w-full min-w-[240px] max-w-[300px] mx-auto"
+          >
+            <PlayerCard
+              player={player}
+              isCurrent={player.id === currentPlayer?.id}
+              result={
+                player.name === results.winner
+                  ? "win"
+                  : !player.alive
+                  ? "lose"
+                  : null
+              }
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Target Number Display */}
+      <div className="bg-green-900/30 p-6 rounded-lg text-center w-full max-w-md">
+        <h2 className="text-2xl font-bold mb-2">TARGET</h2>
+        <p className="text-4xl font-mono text-green-400">
+          {results.target.toFixed(2)}
         </p>
       </div>
     </div>

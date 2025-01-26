@@ -4,6 +4,9 @@ const { broadcastRoomData, createRoomStructure } = require("../services/roomServ
 
 const handleConnection = (socket, io, rooms) => {
   console.log("Player connected:", socket.id);
+  socket.on("request-rooms", () => {
+    broadcastRoomData(io, rooms);
+  });
   broadcastRoomData(io, rooms);
 
   // playerController.js - Update room cleanup logic

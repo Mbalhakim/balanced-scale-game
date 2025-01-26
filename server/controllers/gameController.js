@@ -38,7 +38,7 @@ const handleRoundResults = (roomName, room, io, rooms) => {
     roundLosers.forEach((player) => {
         if (player.alive) { // Only penalize alive players
             player.points -= 1;
-            if (player.points <= -10) {
+            if (player.points <= -5) {
                 player.alive = false;
             }
         }
@@ -103,11 +103,11 @@ const handleRoundResults = (roomName, room, io, rooms) => {
     });
 
     // Prepare next round
-    room.timer = setTimeout(() => {
-        alivePlayersUpdated.forEach(player => {
-            io.to(player.id).emit("next-round");
-        });
-    }, 5000);
+    // room.timer = setTimeout(() => {
+    //     alivePlayersUpdated.forEach(player => {
+    //         io.to(player.id).emit("next-round");
+    //     });
+    // }, 5000);
 };
 
 const handleSelectNumber = (socket, io, rooms, { room: roomName, number }) => {

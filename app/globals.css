@@ -32,10 +32,9 @@ body {
 .player-card {
   transition: all 0.3s ease;
 }
-
-/* Responsive grid */
-@media (max-width: 768px) {
-  .player-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.grayscale {
+  filter: grayscale(100%);
+  opacity: 0.7;
 }
+
+
