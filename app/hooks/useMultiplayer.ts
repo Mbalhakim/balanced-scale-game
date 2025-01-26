@@ -1,94 +1,207 @@
+// app/hooks/useMultiplayer.ts
 import { useEffect, useState } from "react";
 import { initSocket, getSocket } from "@/app/util/socket";
+import { GameState, Player, Room } from "@/app/types/game";
 
-export type Player = {
-  id: string;
-  name: string;
-  ready: boolean;
-  points: number;
-  alive: boolean;
-};
-
-export type Room = {
-  name: string;
-  players: number;
-  maxPlayers: number;
-};
-
-export const useMultiplayer = (playerName: string, selectedRoom: string) => {
-  const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [numberSelected, setNumberSelected] = useState(false);
-  const [results, setResults] = useState<{ target: number; winner: string | null } | null>(null);
-  const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
-  const [otherSelections, setOtherSelections] = useState<{ playerName: string; number: number }[]>([]);
-  const [currentStage, setCurrentStage] = useState(1);
-  const [isAlive, setIsAlive] = useState(true);
+export const useMultiplayer = () => {
+  const [gameState, setGameState] = useState<GameState>({
+    status: 'lobby',
+    players: [],
+    currentStage: 1,
+    selectedNumber: null,
+    results: null,
+    rooms: [],
+    selectedRoom: '',
+    playerName: '',
+    error: undefined
+  });
 
   useEffect(() => {
     const socket = initSocket(process.env.NEXT_PUBLIC_SOCKET_SERVER || "http://localhost:3001");
 
-    if (socket) {
-      socket.on("available-rooms", (rooms) => setAvailableRooms(rooms));
-      socket.on("room-update", (data) => setPlayers(data.players));
-      socket.on("start-game", () => setGameStarted(true));
-      socket.on("stage-update", ({ stage }) => setCurrentStage(stage));
-      socket.on("number-selected", ({ playerName, number }) => {
-        setOtherSelections((prev) => [...prev, { playerName, number }]);
+    const handleRoomUpdate = (players: Player[] = []) => {
+      setGameState(prev => {
+        if (!prev.playerName || !prev.selectedRoom) return prev;
+    
+        const currentPlayer = players.find(p => p.name === prev.playerName);
+        const isEliminated = currentPlayer ? !currentPlayer.alive : false;
+    
+        return {
+          ...prev,
+          players,
+          status: isEliminated ? 'eliminated' : prev.status
+        };
       });
-      socket.on("round-results", ({ target, winner, players }) => {
-        setResults({ target, winner });
-        setPlayers(players);
+    };
 
-        const currentPlayer = players.find((p) => p.name === playerName);
-        if (currentPlayer && !currentPlayer.alive) {
-          setIsAlive(false);
-        }
+    socket.on("available-rooms", (rooms: Room[]) => {
+      setGameState(prev => ({ ...prev, rooms }));
+    });
 
-        setNumberSelected(false);
+    socket.on("room-update", (players: Player[]) => {
+      setGameState(prev => ({
+        ...prev,
+        players,
+        status: prev.status === 'eliminated' ? 'eliminated' : 'lobby'
+      }));
+    });
+
+    socket.on("spectate-mode", (data) => {
+      setGameState(prev => ({
+        ...prev,
+        status: 'spectating',
+        results: data,
+        players: data.players
+      }));
+    });
+
+    
+    
+    socket.on("game-over", ({ winner, players }) => {
+      setGameState(prev => ({
+        ...prev,
+        status: 'game-over',
+        selectedRoom: '',
+        players,
+        results: { target: 0, winner }
+      }));
+    });
+
+    socket.on("player-joined", (player: Player) => {
+      setGameState(prev => ({
+        ...prev,
+        playerName: player.name,
+        selectedRoom: prev.selectedRoom,
+        players: prev.players.some(p => p.id === player.id) 
+          ? prev.players 
+          : [...prev.players, player],
+        status: 'lobby'
+      }));
+    });
+
+    socket.on("countdown-update", ({ countdown }: { countdown: number }) => {
+      setGameState(prev => ({
+        ...prev,
+        countdown
+      }));
+    });
+
+    socket.on("start-game", () => {
+      setGameState(prev => ({
+        ...prev,
+        status: 'playing',
+        results: null,
+        selectedNumber: null
+      }));
+    });
+
+    socket.on("stage-update", ({ stage, players, aliveCount }) => {
+      setGameState(prev => {
+        const currentPlayer = players.find(p => p.name === prev.playerName);
+        return {
+          ...prev,
+          currentStage: stage,
+          players,
+          // Keep existing results during stage transition
+          status: currentPlayer?.alive ? 'stage-transition' : 'eliminated'
+        };
       });
-      socket.on("next-round", () => {
-        if (!isAlive) return;
-        setResults(null);
-        setNumberSelected(false);
-        setSelectedNumber(null);
-        setOtherSelections([]);
+    });
+
+    socket.on("number-selected", ({ playerName, number }) => {
+      setGameState(prev => ({
+        ...prev,
+        players: prev.players.map(p => 
+          p.name === playerName ? { ...p, currentSelection: number } : p
+        )
+      }));
+    });
+
+    socket.on("round-results", ({ target, winner, players, stage, aliveCount, status }) => {
+      setGameState(prev => {
+        const currentPlayer = players.find(p => p.name === prev.playerName);
+        return {
+          ...prev,
+          results: { target, winner },
+          players,
+          currentStage: stage,
+          status: currentPlayer?.alive ? status : 'eliminated'
+        };
       });
-    }
+    });
+
+    // Modify the 'next-round' listener in useMultiplayer.ts
+  socket.on("next-round", () => {
+  setGameState(prev => ({
+    ...prev,
+    results: null,
+    selectedNumber: null,
+    status: 'playing' // Reset status to playing
+  }));
+});
+socket.on("force-leave-room", () => {
+  setGameState(prev => ({
+    ...prev,
+    selectedRoom: '',
+    status: 'lobby'
+  }));
+});
+
+socket.on("victory", ({ winner, players }) => {
+  setGameState(prev => ({
+    ...prev,
+    status: prev.playerName === winner.name ? 'victory' : 'game-over',
+    players,
+    results: { winner: winner.name }
+  }));
+});
+
+    socket.on("error", (message: string) => {
+      setGameState(prev => ({ ...prev, error: message }));
+    });
 
     return () => {
+      socket.off("room-update", handleRoomUpdate);
+      socket.off("player-joined");
       getSocket()?.disconnect();
     };
-  }, [playerName, isAlive]);
+  }, []);
 
-  const handleJoinRoom = () => {
+  const joinRoom = (playerName: string, roomName: string) => {
     const socket = getSocket();
-    if (socket && playerName && selectedRoom) {
-      socket.emit("join-room", { playerName, room: selectedRoom });
+    if (socket) {
+      socket.emit("join-room", { playerName, room: roomName });
+      setGameState(prev => ({
+        ...prev,
+        playerName,
+        selectedRoom: roomName,
+        status: 'lobby'
+      }));
+    }
+  };
+
+  const toggleReady = () => {
+    const socket = getSocket();
+    if (socket && gameState.selectedRoom) {
+      socket.emit("toggle-ready", { room: gameState.selectedRoom });
     }
   };
 
   const selectNumber = (number: number) => {
     const socket = getSocket();
-    if (socket && selectedRoom) {
-      socket.emit("select-number", { room: selectedRoom, number });
-      setSelectedNumber(number);
-      setNumberSelected(true);
+    if (socket && gameState.selectedRoom) {
+      socket.emit("select-number", { 
+        room: gameState.selectedRoom, 
+        number 
+      });
+      setGameState(prev => ({ ...prev, selectedNumber: number }));
     }
   };
 
   return {
-    availableRooms,
-    players,
-    gameStarted,
-    numberSelected,
-    results,
-    selectedNumber,
-    otherSelections,
-    currentStage,
-    isAlive,
-    handleJoinRoom,
-    selectNumber,
+    gameState,
+    joinRoom,
+    toggleReady,
+    selectNumber
   };
 };

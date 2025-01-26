@@ -1,253 +1,191 @@
+// app/multiplayer/page.tsx
 'use client';
-
-import { useState, useEffect } from "react";
-import { initSocket, getSocket } from "@/app/util/socket";
+import { useEffect, useState } from "react";
+import { useMultiplayer } from "@/app/hooks/useMultiplayer";
+import GameOver from "@/app/multiplayer/components/GameOver";
 import NumberGrid from "@/app/multiplayer/components/NumberGrid";
-import PlayerList from "@/app/multiplayer/components/PlayerList";
+import PlayerLobby from "@/app/multiplayer/components/PlayerLobby";
+import JoinRoom from "@/app/multiplayer/components/JoinRoom";
 import Results from "@/app/multiplayer/components/Results";
-import RoomList from "@/app/multiplayer/components/RoomList";
-
-
-type Player = {
-  id: string;
-  name: string;
-  ready: boolean;
-  points: number;
-  alive: boolean;
-};
-
-type Room = {
-  name: string;
-  players: number;
-  maxPlayers: number;
-};
-
+import StageTransition from "./components/StageTransition";
+import VictoryScreen from "./components/VictoryScreen";
 export default function MultiplayerPage() {
-  const [playerName, setPlayerName] = useState("");
-  const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
-  const [selectedRoom, setSelectedRoom] = useState("");
-  const [joined, setJoined] = useState(false);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [numberSelected, setNumberSelected] = useState(false);
-  const [results, setResults] = useState<{ target: number; winner: string | null } | null>(null);
-  const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
-  const [otherSelections, setOtherSelections] = useState<{ playerName: string; number: number }[]>([]);
-  const [currentStage, setCurrentStage] = useState(1);
-  const [isAlive, setIsAlive] = useState(true); // Track whether the player is alive
+  const { gameState, joinRoom, toggleReady, selectNumber } = useMultiplayer();
+  const [localPlayers, setLocalPlayers] = useState<typeof gameState.players>([]);
+
+  // Sync local players state with gameState
   useEffect(() => {
-    const socket = initSocket(process.env.NEXT_PUBLIC_SOCKET_SERVER || "http://localhost:3001");
+    setLocalPlayers(gameState.players);
+  }, [gameState.players]);
 
-    if (socket) {
-      socket.on("available-rooms", (rooms) => setAvailableRooms(rooms));
-      socket.on("room-update", (data) => setPlayers(data.players));
-      socket.on("start-game", () => setGameStarted(true));
-      socket.on("stage-update", ({ stage }) => setCurrentStage(stage));
-      socket.on("number-selected", ({ playerName, number }) => {
-        setOtherSelections((prev) => [...prev, { playerName, number }]);
-      });
-      socket.on("round-results", ({ target, winner, players }) => {
-        setResults({ target, winner });
-        setPlayers(players);
-        setNumberSelected(false);
-      });
-      
+  if (gameState.error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-red-900/90 text-white p-6">
+        <div className="text-center space-y-4">
+          <h2 className="text-3xl font-bold">Connection Error</h2>
+          <p className="text-xl text-red-200">{gameState.error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 py-2 bg-white text-red-900 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            Reconnect
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-        // Check if the player has been eliminated
-
-        const currentPlayer = players.find((p) => p.name === playerName);
-
-        if (currentPlayer && !currentPlayer.alive) {
-
-          setIsAlive(false);
-
-        }
-
-
-      socket.on("next-round", () => {
-        if (!isAlive) return;
-        setResults(null); // Clear previous round results
-        setNumberSelected(false); // Reset selection status
-        setSelectedNumber(null); // Clear selected number
-        setOtherSelections([]); // Clear selections from others
-        console.log("Next round started");
-      });
-      socket.on("error", (message) => alert(message));
-    }
-
-    return () => {
-      getSocket()?.disconnect();
-    };
-  }, []);
-
-  const handleJoin = () => {
-    if (!playerName || !selectedRoom) {
-      alert("Please enter your name and select a room!");
-      return;
-    }
-
-    const socket = getSocket();
-    if (socket) {
-      socket.emit("join-room", { playerName, room: selectedRoom });
-      setJoined(true);
-    }
-  };
-
-  const selectNumber = (number: number) => {
-    const socket = getSocket();
-    if (socket && selectedRoom) {
-      socket.emit("select-number", { room: selectedRoom, number });
-      setSelectedNumber(number);
-      setNumberSelected(true);
-    }
-  };
+  if (!gameState.selectedRoom) {
+    return (
+      <JoinRoom 
+        onJoin={joinRoom} 
+        rooms={gameState.rooms} 
+      />
+    );
+  }
   
-  if (!isAlive) {
 
-    return (
-
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 text-white">
-
-        <h1 className="text-5xl font-bold mb-4">Game Over</h1>
-
-        <p className="text-xl">You have been eliminated. Watch the game progress below:</p>
-
-        {results && (
-
-          <div className="mt-4">
-
-            <Results target={results.target} winner={results.winner} />
-
-            <h3 className="text-xl mt-4">Player Status:</h3>
-
-            <ul>
-
-              {players.map((player) => (
-
-                <li
-
-                  key={player.id}
-
-                  className={`mt-2 ${
-
-                    player.alive ? "text-white" : "text-red-500"
-
-                  }`}
-
-                >
-
-                  {player.name} - Points: {player.points}{" "}
-
-                  {player.alive ? "" : "(Eliminated)"}
-
-                </li>
-
-              ))}
-
-            </ul>
-
-          </div>
-
-        )}
-
-      </div>
-
-    );
-
+  if (gameState.status === 'eliminated') {
+    return <GameOver results={gameState.results} players={gameState.players} />;
   }
-  if (gameStarted) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-700">
-        <h1 className="text-3xl font-bold">Game In Progress</h1>
-        <h2 className="text-2xl mt-4">Current Stage: {currentStage}</h2>
 
-        {results ? (
-          <div>
-            <Results target={results.target} winner={results.winner} />
-            <h3 className="text-xl mt-4">Player Status:</h3>
-            <ul>
-              {players.map((player) => (
-                <li
-                  key={player.id}
-                  className={`mt-2 ${
-                    player.alive ? "text-white" : "text-red-500"
-                  }`}
-                >
-                  {player.name} - Points: {player.points}{" "}
-                  {player.alive ? "" : "(Eliminated)"}
-                </li>
-              ))}
-            </ul>
+ // Modify the status check
+ if (gameState.status === 'stage-transition') {
+  return <StageTransition 
+    stage={gameState.currentStage}
+    aliveCount={gameState.players.filter(p => p.alive).length}
+    results={gameState.results!}
+    currentPlayer={gameState.players.find(p => p.name === gameState.playerName)}
+  />;
+}
+
+  if (gameState.status === 'playing') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 text-white p-4">
+        <div className="w-full max-w-4xl space-y-6">
+          {/* Game Header */}
+          <div className="text-center space-y-2">
+            <h1 className="text-4xl font-bold text-purple-400">
+              Stage {gameState.currentStage}
+            </h1>
+            <p className="text-gray-400 text-lg">
+              Room: <span className="font-mono">{gameState.selectedRoom}</span>
+            </p>
           </div>
-        ) : numberSelected ? (
-          <div className="mt-4">
-            <p>Waiting for other players to select...</p>
-            <h3 className="text-xl mt-4">Numbers selected by other players:</h3>
-            <ul className="mt-2">
-              {otherSelections.map(({ playerName, number }, index) => (
-                <li key={index} className="text-white">
-                  {playerName} selected {number}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <NumberGrid
-            onSelect={selectNumber}
-            selectedNumber={selectedNumber}
-            selectedNumbers={otherSelections.map((o) => o.number)}
-          />
-        )}
+
+          {gameState.results ? (
+            /* Results Screen */
+            <div className="bg-gray-700/50 rounded-xl p-6 shadow-xl">
+              <Results {...gameState.results} />
+              <div className="mt-8">
+                <h3 className="text-2xl font-bold mb-4">Player Status</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {localPlayers.map(player => (
+                    <div
+                      key={player.id}
+                      className={`p-4 rounded-lg ${
+                        player.alive 
+                          ? 'bg-green-900/30' 
+                          : 'bg-red-900/30'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">
+                          {player.name}
+                          {player.name === gameState.playerName && (
+                            <span className="ml-2 text-blue-400">(You)</span>
+                          )}
+                        </span>
+                        <span className={`text-sm ${
+                          player.alive ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {player.alive ? `Points: ${player.points}` : 'Eliminated'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Game Screen */
+            <div className="space-y-8">
+              <NumberGrid 
+                onSelect={selectNumber}
+                selectedNumber={gameState.selectedNumber}
+              />
+              
+              {/* Current Players */}
+              <div className="bg-gray-700/50 rounded-xl p-6">
+                <h3 className="text-2xl font-bold mb-4">Active Players</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {localPlayers.filter(p => p.alive).map(player => (
+                    <div
+                      key={player.id}
+                      className="p-3 bg-gray-600 rounded-lg flex items-center justify-between"
+                    >
+                      <span>{player.name}</span>
+                      <span className="text-sm text-gray-300">
+                        Points: {player.points}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
+  
+  if (gameState.status === 'victory') {
+    return <VictoryScreen 
+      winner={gameState.results?.winner || ''} 
+      players={gameState.players} 
+    />;
+  }
 
-  if (joined) {
-    const toggleReady = () => {
-      const socket = getSocket();
-      if (socket && selectedRoom) {
-        socket.emit("toggle-ready", { room: selectedRoom });
-      }
-    };
-
+  if (gameState.status === 'spectating') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-700">
-        <h2 className="text-2xl font-semibold">Welcome, {playerName}!</h2>
-        <p className="mt-2">
-          You are in room: <strong>{selectedRoom}</strong>
-        </p>
-        <PlayerList
-          players={players}
-          currentPlayerName={playerName}
-          onToggleReady={toggleReady}
-        />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 text-white p-6">
+        <h2 className="text-3xl font-bold mb-4">👀 Spectator Mode</h2>
+        <div className="max-w-2xl w-full">
+          <Results {...gameState.results!} />
+          <div className="mt-6 bg-gray-700/50 p-4 rounded-lg">
+            <h3 className="text-xl font-bold mb-3">Player Status</h3>
+            {gameState.players.map(player => (
+              <div 
+                key={player.id}
+                className={`p-3 mb-2 rounded-lg ${
+                  player.alive ? 'bg-green-900/30' : 'bg-red-900/30'
+                }`}
+              >
+                {player.name} - {player.alive ? 'Alive' : 'Eliminated'}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
+  // Update existing game-over check
+  if (gameState.status === 'game-over') {
+    return <GameOver 
+      results={gameState.results} 
+      players={gameState.players} 
+      isSpectator={false}
+    />;
+  }
+  /* Lobby Screen */
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-700">
-      <h1 className="text-3xl font-bold">Join a Room</h1>
-      <div className="mt-4 flex flex-col items-center">
-        <input
-          type="text"
-          placeholder="Enter your name"
-          value={playerName}
-          onChange={(e) => setPlayerName(e.target.value)}
-          className="p-2 mb-4 text-gray-900 border border-gray-300 rounded"
-        />
-        <RoomList
-          availableRooms={availableRooms}
-          selectedRoom={selectedRoom}
-          onSelectRoom={setSelectedRoom}
-        />
-        <button
-          onClick={handleJoin}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
-        >
-          Join Room
-        </button>
-      </div>
-    </div>
+    <PlayerLobby
+    players={localPlayers}
+    currentPlayerName={gameState.playerName}
+    roomName={gameState.selectedRoom}
+    onToggleReady={toggleReady}
+    countdown={gameState.countdown} // Add this line
+  />
   );
 }

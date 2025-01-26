@@ -4,12 +4,14 @@ import { Player } from "@/app/hooks/useMultiplayer";
 type GameOverProps = {
   results: { target: number; winner: string | null } | null;
   players: Player[];
+  isSpectator?: boolean;
 };
 
-export default function GameOver({ results, players }: GameOverProps) {
+export default function GameOver({ results, players, isSpectator }: GameOverProps) {
   return (
+    
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 text-white">
-      <h1 className="text-5xl font-bold mb-4">Game Over</h1>
+      <h1 className="text-5xl font-bold mb-4"> {isSpectator ? 'Game Ended' : 'Game Over'}</h1>
       <p className="text-xl">You have been eliminated. Watch the game progress below:</p>
       {results && (
         <div className="mt-4">
