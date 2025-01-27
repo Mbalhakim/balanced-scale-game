@@ -1,5 +1,5 @@
 // StageTransition.tsx
-"use client";
+'use client';
 import { Player } from "@/app/types/game";
 import PlayerCard from "@/app/multiplayer/components/PlayerCard";
 
@@ -7,7 +7,7 @@ export default function StageTransition({
   stage,
   results,
   players = [],
-  currentPlayer,
+  currentPlayer
 }: {
   stage: number;
   results: { target: number; winner: string };
@@ -23,22 +23,17 @@ export default function StageTransition({
       </div>
 
       {/* Player Cards Grid - Updated */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
-        {players?.map((player) => (
-          <div
-            key={player.id}
-            className="w-full min-w-[240px] max-w-[300px] mx-auto"
-          >
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 w-full max-w-6xl mb-8">
+        {players?.map(player => (
+          <div key={player.id} className="min-w-[240px]"> {/* Add min-width */}
             <PlayerCard
               player={player}
               isCurrent={player.id === currentPlayer?.id}
               result={
-                player.name === results.winner
-                  ? "win"
-                  : !player.alive
-                  ? "lose"
-                  : null
+                player.name === results.winner ? 'win' :
+                !player.alive ? 'lose' : null
               }
+              className="w-full"
             />
           </div>
         ))}

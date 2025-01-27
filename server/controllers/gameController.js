@@ -103,11 +103,11 @@ const handleRoundResults = (roomName, room, io, rooms) => {
     });
 
     // Prepare next round
-    // room.timer = setTimeout(() => {
-    //     alivePlayersUpdated.forEach(player => {
-    //         io.to(player.id).emit("next-round");
-    //     });
-    // }, 5000);
+    room.timer = setTimeout(() => {
+        alivePlayersUpdated.forEach(player => {
+            io.to(player.id).emit("next-round");
+        });
+    }, 3000);
 };
 
 const handleSelectNumber = (socket, io, rooms, { room: roomName, number }) => {
