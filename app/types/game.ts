@@ -16,15 +16,18 @@ export type Room = {
 };
 
 export type GameState = {
-  status: 'lobby' | 'playing' | 'eliminated' | 'game-over'|'spectating' | 'victory' |'stage-transition';
+  status: 'lobby' | 'playing' | 'eliminated' | 'game-over' | 'spectating' | 'victory' | 'stage-transition';
   players: Player[];
   currentStage: number;
   selectedNumber: number | null;
-  results: { target: number; winner: string | null } | null;
+  results: { 
+    target: number; 
+    winner: string | null;
+    losers: string[]; 
+  } | null;
   rooms: Room[];
   selectedRoom: string;
   playerName: string;
   error?: string;
   countdown?: number;
-  currentSelection: number | null;
 };

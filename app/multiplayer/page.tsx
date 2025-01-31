@@ -2,13 +2,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useMultiplayer } from "@/app/hooks/useMultiplayer";
-import GameOver from "@/app/multiplayer/components/GameOver";
+import GameOver from "@/app/multiplayer/views/GameOver";
 import NumberGrid from "@/app/multiplayer/components/NumberGrid";
 import PlayerLobby from "@/app/multiplayer/components/PlayerLobby";
 import JoinRoom from "@/app/multiplayer/components/JoinRoom";
 import Results from "@/app/multiplayer/components/Results";
-import StageTransition from "./components/StageTransition";
-import VictoryScreen from "./components/VictoryScreen";
+import StageTransition from "@/app/multiplayer/components/StageTransition";
+import VictoryScreen from "@/app/multiplayer/views/Spectator";
+import Spectator from "@/app/multiplayer/views/Spectator";
 import { maintainSocketConnection } from "@/app/util/socket";
 export default function MultiplayerPage() {
   const { gameState, joinRoom, toggleReady, selectNumber, leaveRoom } =
@@ -103,7 +104,8 @@ export default function MultiplayerPage() {
             /* Results Screen */
             <Results
               target={gameState.results.target}
-              winner={gameState.results.winner}
+              roundWinner={gameState.results.winner}
+              roundLosers={gameState.results.losers} // Add this line
               players={localPlayers}
               currentPlayerName={gameState.playerName}
             />
@@ -157,27 +159,14 @@ export default function MultiplayerPage() {
 
   if (gameState.status === "spectating") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 text-white p-6">
-        <h2 className="text-3xl font-bold mb-4">👀 Spectator Mode</h2>
-        <div className="max-w-2xl w-full">
-          <Results {...gameState.results!} />
-          <div className="mt-6 bg-gray-700/50 p-4 rounded-lg">
-            <h3 className="text-xl font-bold mb-3">Player Status</h3>
-            {gameState.players.map((player) => (
-              <div
-                key={player.id}
-                className={`p-3 mb-2 rounded-lg ${
-                  player.alive ? "bg-green-900/30" : "bg-red-900/30"
-                }`}
-              >
-                {player.name} - {player.alive ? "Alive" : "Eliminated"}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <Spectator
+        players={gameState.players}
+        results={gameState.results}
+        currentPlayerName={gameState.playerName}
+      />
     );
   }
+  
 
   /* Lobby Screen */
   return (
