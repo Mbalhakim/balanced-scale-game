@@ -26,6 +26,24 @@ const startGameCountdown = (roomName, room, io, rooms) => {
 const startGame = (roomName, room, io, rooms) => {
   room.status = "in-game";
   room.gameActive = true;
+  
+  // Set initial stage based on player count
+  const playerCount = room.players.length;
+  if (playerCount <= 2) {
+    room.stage = 3;
+  } else if (playerCount <= 4) {
+    room.stage = 2;
+  } else {
+    room.stage = 1;
+  }
+
+  // Add this emit for initial stage
+  io.to(roomName).emit("stage-update", {
+    stage: room.stage,
+    players: room.players,
+    aliveCount: room.players.length
+  });
+
   room.players.forEach((p) => {
     p.ready = false;
     p.alive = true;
