@@ -1,26 +1,72 @@
 const { startGameCountdown, startGame, resetRoom } = require("../services/gameService");
 
-// Helper functions
-const getValidSubmissions = (room, alivePlayerIds) => {
-  return Object.entries(room.roundData)
+const GAME_CONSTANTS = {
+  TARGET_MULTIPLIER: 0.8,  // Target = 80% of average selected numbers
+  ELIMINATION_THRESHOLD: -3, // Points needed for eliminitaion
+  FINAL_STAGE_PLAYER_COUNT: 2, //Player neede for the Final stage to initiate 
+  STAGE_2_PLAYER_COUNT: 4, //Player neede for the second stage to initiate
+  NEXT_ROUND_DELAY: 3000, // 3 seconds between rounds
+  MIN_PLAYERS_FOR_GAME: 2, // Minimum palyers to start
+};
+
+const GAME_STAGES = {
+  EARLY: 1,
+  MIDDLE: 2,
+  FINAL: 3
+};
+
+/**
+ * Extract valid number submissions from alive players 
+ * @param {Object} room - Game room object
+ * @param {*} alivePlayerIds - set of alive players 
+ * @returns {number[]} Array of valid submissions
+ */
+const extractValidSubmissions = (room, alivePlayerIds) => {
+  const submissions = Object.entries(room.roundData)
     .filter(([playerId]) => alivePlayerIds.has(playerId))
-    .map(([_, number]) => number);
+    .map(([_, submittedNumber]) => submittedNumber);
+  return submissions;
 };
 
-const calculateTarget = (validSubmissions) => {
-  const average = validSubmissions.reduce((sum, num) => sum + num, 0) / validSubmissions.length;
-  return average * 0.8;
+
+/**
+ * Calculate the target number (80% of average)
+ * @param {number[]} validSubmissions - array of submitted numbers 
+ * @returns {number} the calcualted target number
+ */
+const calculateRoundTarget = (validSubmissions) => {
+
+  if (validSubmissions.length == 0) {
+    console.error("No valid submission to calculate target");
+    return 0;
+  }
+
+  const sum = validSubmissions.reduce((total, number) => total + number, 0);
+  const average = sum / validSubmissions.length;
+  const target = average * GAME_CONSTANTS.TARGET_MULTIPLIER;
+  console.log(`Average: ${average.toFixed(2)}, Target: ${target.toFixed(2)}`);
+  return target;
 };
 
-const determineRoundWinner = (room, alivePlayerIds, target) => {
+/**
+ * Determines the round winner based on closest distance to target
+ * Tiebreaker: earliest submission time wins
+ * @param {Object} room - Game room object
+ * @param {Set} alivePlayerIds - Set of alive player IDs
+ * @param {number} targetNumber - The target number to get closest to
+ * @returns {Object} Object containing winner and losers
+ */
+
+const findRoundWinner = (room, alivePlayerIds, targetNumber) => {
   let roundWinnerId = null;
   let minDiff = Infinity;
   let earliestTimestamp = Infinity;
 
+  // Find the player closest to target (with tiebreaker)
   Object.entries(room.roundData).forEach(([playerId, number]) => {
     if (!alivePlayerIds.has(playerId)) return;
 
-    const diff = Math.abs(number - target);
+    const diff = Math.abs(number - targetNumber);
     const submissionTime = room.submissionTimestamps?.[playerId] || 0;
 
     if (diff < minDiff || (diff === minDiff && submissionTime < earliestTimestamp)) {
@@ -48,23 +94,23 @@ const updatePlayerStates = (roundLosers, aliveCount) => {
 };
 
 const handleGameWinner = (roomName, room, io, rooms) => {
-    const gameWinner = room.players.find((p) => p.alive);
-    io.to(gameWinner.id).emit("victory", {
-      winner: gameWinner,
+  const gameWinner = room.players.find((p) => p.alive);
+  io.to(gameWinner.id).emit("victory", {
+    winner: gameWinner,
+    players: room.players,
+    isGameWinner: true,
+  });
+
+  room.players.filter((p) => p.id !== gameWinner.id).forEach((loser) => {
+    io.to(loser.id).emit("game-over", {
+      winner: gameWinner.name,
       players: room.players,
-      isGameWinner: true,
+      isGameLoser: true,
     });
-  
-    room.players.filter((p) => p.id !== gameWinner.id).forEach((loser) => {
-      io.to(loser.id).emit("game-over", {
-        winner: gameWinner.name,
-        players: room.players,
-        isGameLoser: true,
-      });
-    });
-  
-    resetRoom(roomName, room, io, rooms);
-  };
+  });
+
+  resetRoom(roomName, room, io, rooms);
+};
 
 const handleEliminatedPlayers = (room, target, roundWinner, aliveCount, io) => {
   room.players.filter((p) => !p.alive).forEach((player) => {
@@ -122,13 +168,13 @@ const notifyRoundResults = (io, roomName, target, roundWinner, roundLoserNames, 
 const handleRoundResults = (roomName, room, io, rooms) => {
   const alivePlayers = room.players.filter((p) => p.alive);
   const alivePlayerIds = new Set(alivePlayers.map((p) => p.id));
-  
-  const validSubmissions = getValidSubmissions(room, alivePlayerIds);
-  const target = calculateTarget(validSubmissions);
-  
-  const { winner: roundWinner, losers: roundLosers } = determineRoundWinner(room, alivePlayerIds, target);
+
+  const validSubmissions = extractValidSubmissions(room, alivePlayerIds);
+  const target = calculateRoundTarget(validSubmissions);
+
+  const { winner: roundWinner, losers: roundLosers } = findRoundWinner(room, alivePlayerIds, target);
   const roundLoserNames = roundLosers.map(p => p.name);
-  
+
   updatePlayerStates(roundLosers, alivePlayers.length);
   const alivePlayersUpdated = room.players.filter((p) => p.alive);
 
@@ -173,7 +219,7 @@ const handleSelectNumber = (socket, io, rooms, { room: roomName, number }) => {
 
   if (allSubmitted) {
     handleRoundResults(roomName, room, io, rooms);
-   
+
   }
 };
 
