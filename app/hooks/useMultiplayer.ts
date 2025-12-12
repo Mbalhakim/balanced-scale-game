@@ -84,7 +84,7 @@ export const useMultiplayer = () => {
         results: { 
           target: 0, 
           winner,
-          losers: players.filter(p => !p.alive).map(p => p.name) 
+          losers: players.filter((p: Player) => !p.alive).map((p: Player) => p.name) 
         },
       }));
     });
@@ -196,7 +196,7 @@ export const useMultiplayer = () => {
           results: {
             target: 0, // Add default target value
             winner: winner.name,
-            losers: players.filter(p => p.name !== winner.name).map(p => p.name)
+            losers: players.filter((p: Player) => p.name !== winner.name).map((p: Player) => p.name)
           }
         };
       });
