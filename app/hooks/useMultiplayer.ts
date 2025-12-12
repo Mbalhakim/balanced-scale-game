@@ -25,7 +25,7 @@ export const useMultiplayer = () => {
       setGameState((prev) => {
         if (!prev.playerName || !prev.selectedRoom) return prev;
 
-        const currentPlayer = players.find((p) => p.name === prev.playerName);
+        const currentPlayer = players.find((p: Player) => p.name === prev.playerName);
         const isEliminated = currentPlayer ? !currentPlayer.alive : false;
 
         return {
@@ -46,7 +46,7 @@ export const useMultiplayer = () => {
         // Prevent overriding victory/game-over states
         if (prev.status === 'victory' || prev.status === 'game-over') return prev;
         
-        const currentPlayer = players.find((p) => p.name === prev.playerName);
+        const currentPlayer = players.find((p: Player) => p.name === prev.playerName);
         const isEliminated = currentPlayer ? !currentPlayer.alive : false;
     
         return {
@@ -94,7 +94,7 @@ export const useMultiplayer = () => {
         ...prev,
         playerName: player.name,
         selectedRoom: prev.selectedRoom,
-        players: prev.players.some((p) => p.id === player.id)
+        players: prev.players.some((p: Player) => p.id === player.id)
           ? prev.players
           : [...prev.players, player],
         status: "lobby",
@@ -126,7 +126,7 @@ export const useMultiplayer = () => {
 
     socket.on("stage-update", ({ stage, players }) => {
       setGameState((prev) => {
-        const currentPlayer = players.find((p) => p.name === prev.playerName);
+        const currentPlayer = players.find((p: Player) => p.name === prev.playerName);
         return {
           ...prev,
           currentStage: stage,
@@ -139,7 +139,7 @@ export const useMultiplayer = () => {
     socket.on("number-selected", ({ playerName, number }) => {
       setGameState((prev) => ({
         ...prev,
-        players: prev.players.map((p) =>
+        players: prev.players.map((p: Player) =>
           p.name === playerName ? { ...p, currentSelection: number } : p
         ),
       }));
@@ -156,7 +156,7 @@ export const useMultiplayer = () => {
         status,
       }) => {
         setGameState((prev) => {
-          const currentPlayer = players.find((p) => p.name === prev.playerName);
+          const currentPlayer = players.find((p: Player) => p.name === prev.playerName);
           return {
             ...prev,
             results: { target, winner: roundWinner, losers: roundLosers }, // Map roundWinner to winner

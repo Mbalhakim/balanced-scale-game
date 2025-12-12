@@ -8,7 +8,7 @@ import PlayerLobby from "@/app/multiplayer/components/PlayerLobby";
 import JoinRoom from "@/app/multiplayer/components/JoinRoom";
 import Results from "@/app/multiplayer/components/Results";
 import StageTransition from "@/app/multiplayer/components/StageTransition";
-import VictoryScreen from "@/app/multiplayer/views/Spectator";
+import VictoryScreen from "@/app/multiplayer/views/VictoryScreen";
 import Spectator from "@/app/multiplayer/views/Spectator";
 import { maintainSocketConnection } from "@/app/util/socket";
 export default function MultiplayerPage() {
@@ -41,7 +41,7 @@ export default function MultiplayerPage() {
     );
   }
   // Update existing game-over check
-  if (gameState.status === "game-over") {
+  if (gameState.status === "game-over" && gameState.results) {
     return (
       <GameOver
         results={gameState.results}
@@ -55,7 +55,7 @@ export default function MultiplayerPage() {
     return <JoinRoom onJoin={joinRoom} rooms={gameState.rooms} />;
   }
 
-  if (gameState.status === "eliminated" || gameState.status === "game-over") {
+  if ((gameState.status === "eliminated" || gameState.status === "game-over") && gameState.results) {
     return (
       <GameOver
         results={gameState.results}
@@ -70,12 +70,10 @@ export default function MultiplayerPage() {
     const currentPlayer = gameState.players.find(
       (p) => p.name === gameState.playerName
     );
-    const aliveCount = gameState.players.filter((p) => p.alive).length;
 
     return (
       <StageTransition
         stage={gameState.currentStage}
-        aliveCount={aliveCount}
         results={{
           target: gameState.results?.target || 0,
           winner: gameState.results?.winner || "", // Now properly mapped
@@ -151,7 +149,8 @@ export default function MultiplayerPage() {
       <VictoryScreen
         winner={gameState.results?.winner || ""}
         players={gameState.players}
-        onLeave={leaveRoom} // Add this prop
+        onLeave={leaveRoom}
+        currentPlayerName={gameState.playerName}
       />
     );
   }

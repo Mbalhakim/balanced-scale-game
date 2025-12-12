@@ -29,9 +29,9 @@ export default function StageTransition({
             <PlayerCard
               player={player}
               isCurrent={player.id === currentPlayer?.id}
-              result={
-                player.name === results.winner ? 'win' :
-                !player.alive ? 'lose' : null
+              status={
+                player.name === results.winner ? 'round-winner' :
+                !player.alive ? 'round-loser' : null
               }
               className="w-full"
             />

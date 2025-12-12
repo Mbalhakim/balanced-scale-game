@@ -31,7 +31,6 @@ const NumberGrid: React.FC<NumberGridProps> = ({
           <PlayerCard
             player={currentPlayer}
             isCurrent={true}
-            compact={true}
             className="w-full max-w-md mx-auto"
           />
         )}
