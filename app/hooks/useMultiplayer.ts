@@ -18,7 +18,7 @@ export const useMultiplayer = () => {
 
   useEffect(() => {
     const socket = initSocket(
-      process.env.NEXT_PUBLIC_SOCKET_SERVER || "http://localhost:3001"
+      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001"
     );
     socket.emit("request-rooms");
     const handleRoomUpdate = (players: Player[] = []) => {
