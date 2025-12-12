@@ -115,7 +115,6 @@ export default function MultiplayerPage() {
               <NumberGrid
                 onSelect={selectNumber}
                 selectedNumber={gameState.selectedNumber}
-                players={gameState.players}
                 currentPlayer={gameState.players.find(
                   (p) => p.name === gameState.playerName
                 )}

@@ -124,7 +124,7 @@ export const useMultiplayer = () => {
       }));
     });
 
-    socket.on("stage-update", ({ stage, players, aliveCount }) => {
+    socket.on("stage-update", ({ stage, players }) => {
       setGameState((prev) => {
         const currentPlayer = players.find((p) => p.name === prev.playerName);
         return {
@@ -153,7 +153,6 @@ export const useMultiplayer = () => {
         roundLosers,
         players,
         stage,
-        aliveCount,
         status,
       }) => {
         setGameState((prev) => {

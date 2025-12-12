@@ -33,6 +33,7 @@ export default function PlayerCard({
 
       {/* Image Container */}
       <div className="relative w-full aspect-square mb-4 overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={player.image || '/images/avatars/default-avatar.png'}
           alt={player.name}

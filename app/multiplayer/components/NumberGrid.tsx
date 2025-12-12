@@ -6,14 +6,12 @@ import { Player } from "@/app/types/game";
 type NumberGridProps = {
   onSelect: (number: number) => void;
   selectedNumber: number | null;
-  players: Player[];
   currentPlayer?: Player;
 };
 
 const NumberGrid: React.FC<NumberGridProps> = ({ 
   onSelect, 
   selectedNumber,
-  players,
   currentPlayer 
 }) => {
   const [hasSubmitted, setHasSubmitted] = useState(false);
