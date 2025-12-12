@@ -60,7 +60,7 @@ export const useMultiplayer = () => {
     socket.on("spectate-mode", (data) => {
       setGameState((prev) => {
         // Check if game should be over (only 1 player left)
-        const aliveCount = data.players.filter(p => p.alive).length;
+        const aliveCount = data.players.filter((p: Player) => p.alive).length;
         if (aliveCount <= 1) return prev; // Let victory/game-over handle this
         
         return {
@@ -69,7 +69,7 @@ export const useMultiplayer = () => {
           results: {
             target: data.target,
             winner: data.roundWinner,
-            losers: data.players.filter(p => !p.alive).map(p => p.name)
+            losers: data.players.filter((p: Player) => !p.alive).map((p: Player) => p.name)
           },
           players: data.players,
         };
