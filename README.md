@@ -1,36 +1,149 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎮 Balanced Scale Game - Frontend
 
-## Getting Started
+Next.js multiplayer game frontend with Socket.io integration.
 
-First, run the development server:
+## 🚀 Quick Start
 
+### Development
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit: http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🐳 Docker Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Build and Run
+```bash
+docker build -t balanced-scale-frontend .
+docker run -p 3000:3000 -e NEXT_PUBLIC_SOCKET_URL=https://api.yourdomain.com balanced-scale-frontend
+```
 
-## Learn More
+## 📋 Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+Create `.env.local` for development:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Production (set in Dokploy):
+```env
+NEXT_PUBLIC_SOCKET_URL=https://api.yourdomain.com
+NODE_ENV=production
+```
 
-## Deploy on Vercel
+## 🔧 Dokploy Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Prerequisites
+- Server repo deployed first at `api.yourdomain.com`
+- GitHub repository created
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Steps
+
+1. **Push to GitHub:**
+```bash
+git add .
+git commit -m "Ready for deployment"
+git push origin main
+```
+
+2. **Create App in Dokploy:**
+   - Go to Dokploy Dashboard
+   - Click "Create App" → "Docker"
+   - Configure:
+     - **Name**: `balanced-scale-frontend`
+     - **Repository**: Your GitHub repo URL
+     - **Branch**: `main`
+     - **Dockerfile**: `Dockerfile`
+     - **Port**: `3000`
+     - **Domain**: `yourdomain.com`
+
+3. **Environment Variables:**
+   ```
+   NEXT_PUBLIC_SOCKET_URL=https://api.yourdomain.com
+   NODE_ENV=production
+   ```
+
+4. **Enable Auto-Deploy:**
+   - Go to Settings → CI/CD
+   - Enable "Auto Deploy on Push"
+   - Select branch: `main`
+
+5. **Deploy:**
+   - Click "Deploy"
+   - Wait for build to complete
+   - Traefik auto-configures SSL ✨
+
+## 🔄 Auto-Deploy Workflow
+
+```
+Push to GitHub → Dokploy pulls → Builds Docker → 
+Traefik handles SSL → App deploys
+```
+
+Every commit to `main` automatically deploys!
+
+## 🌐 Production URLs
+
+- **Frontend**: https://yourdomain.com
+- **Backend API**: https://api.yourdomain.com
+
+## 🏗️ Project Structure
+
+```
+app/
+├── page.tsx                  # Home page
+├── layout.tsx               # Root layout
+├── globals.css              # Global styles
+├── multiplayer/             # Multiplayer game
+│   ├── page.tsx
+│   ├── components/          # Game components
+│   └── views/               # Game views
+├── hooks/                   # Custom hooks
+├── types/                   # TypeScript types
+└── util/                    # Utilities
+```
+
+## 🔐 Production Checklist
+
+- [ ] Update `NEXT_PUBLIC_SOCKET_URL` to production backend
+- [ ] Enable auto-deploy on push
+- [ ] Configure domain in Dokploy
+- [ ] Enable SSL/HTTPS
+- [ ] Test WebSocket connection
+- [ ] Verify game functionality
+
+## 🐛 Troubleshooting
+
+### Can't connect to backend
+- Verify `NEXT_PUBLIC_SOCKET_URL` is correct
+- Check if backend is deployed and running
+- Ensure backend allows CORS from your domain
+
+### Build fails
+- Check Node.js version (requires >=20)
+- Verify all dependencies in package.json
+- Check Dokploy build logs
+
+### SSL/HTTPS issues
+- Ensure domain DNS points to Dokploy server
+- Wait a few minutes for certificate generation
+- Check Traefik logs in Dokploy
+
+## 📚 Tech Stack
+
+- **Framework**: Next.js 15
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Real-time**: Socket.io Client
+- **Deployment**: Docker + Dokploy + Traefik
+
+## 🔗 Related Repository
+
+- **Server**: https://github.com/yourusername/balanced-scale-server
+
+---
+
+See [DEPLOYMENT-SEPARATE-REPOS.md](DEPLOYMENT-SEPARATE-REPOS.md) for complete deployment guide.
